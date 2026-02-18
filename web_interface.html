@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 Medical Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .chat-container {
+            padding: 30px;
+            height: 500px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .bot-message {
+            background: #f5f5f5;
+            margin-right: auto;
+        }
+        
+        .input-area {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        
+        #question {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #question:focus {
+            border-color: #4facfe;
+        }
+        
+        #submit-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        #submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        #submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Medical Chatbot</h1>
+            <p>Ask medical questions based on your knowledge base</p>
+        </div>
+        
+        <div class="chat-container" id="chat-container">
+            <div class="message bot-message">
+                Hello! I'm your medical assistant. Ask me any medical questions based on the knowledge base.
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="question" placeholder="Enter your medical question..." autocomplete="off">
+            <button id="submit-btn" onclick="askQuestion()">Ask</button>
+        </div>
+        
+        <div class="status" id="status">Ready</div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const chatContainer = document.getElementById('chat-container');
+        const questionInput = document.getElementById('question');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusDiv = document.getElementById('status');
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    statusDiv.textContent = '🟢 Connected to Medical Chatbot API';
+                    statusDiv.style.color = '#4CAF50';
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                statusDiv.textContent = '🔴 API not connected. Please start the server.';
+                statusDiv.style.color = '#f44336';
+            }
+        }
+
+        async function askQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // Disable input during processing
+            questionInput.disabled = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            // Add user message
+            addMessage(question, 'user');
+
+            try {
+                const response = await fetch(`${API_URL}/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addMessage(data.answer, 'bot');
+                
+            } catch (error) {
+                addMessage(`Sorry, I encountered an error: ${error.message}`, 'bot');
+                console.error('Error:', error);
+            } finally {
+                // Re-enable input
+                questionInput.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Ask';
+                questionInput.value = '';
+                questionInput.focus();
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            if (sender === 'bot') {
+                // Convert markdown-like formatting to HTML
+                text = text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/### (.*?)(?=\n|$)/g, '<h3>$1</h3>')
+                    .replace(/## (.*?)(?=\n|$)/g, '<h2>$1</h2>')
+                    .replace(/# (.*?)(?=\n|$)/g, '<h1>$1</h1>')
+                    .replace(/\n\n/g, '</p><p>')
+                    .replace(/\n/g, '<br>');
+                text = `<p>${text}</p>`;
+            }
+            
+            messageDiv.innerHTML = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Handle Enter key
+        questionInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                askQuestion();
+            }
+        });
+
+        // Check health on load
+        checkHealth();
+        setInterval(checkHealth, 5000); // Check every 5 seconds
+    </script>
+</body>
+</html>

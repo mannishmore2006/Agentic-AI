@@ -1,0 +1,16 @@
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-core>=0.3.15
+langchain-text-splitters>=0.3.0
+langchain-huggingface>=0.1.0
+langchain-groq>=0.2.0
+faiss-cpu==1.9.0
+pypdf==5.1.0
+python-dotenv==1.0.1
+fastapi==0.115.4
+uvicorn==0.32.0
+pydantic==2.9.2
+langsmith==0.1.137
+transformers==4.46.3
+torch==2.5.1
+sentence-transformers==3.2.1
